@@ -1,0 +1,7 @@
+{# 笔记的元信息行：日期 + 标签。详情页与列表项共用这一份。
+   标签渲染成纯文本而不是链接：tag 页本期不做（spec N3），
+   链到 /tags/… 等于给读者一个必然 404 的链接。 #}
+{% macro noteMeta(date, tags) -%}
+<time datetime="{{ date | ymd }}">{{ date | ymd }}</time>
+{%- if tags and tags | length > 0 %} · <span class="tags">{% for tag in tags %}#{{ tag }}{% if not loop.last %} {% endif %}{% endfor %}</span>{% endif %}
+{%- endmacro %}

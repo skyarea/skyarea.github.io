@@ -8,3 +8,9 @@ title: skyarea
     <p>你好，我是 skyarea。我写软件，会把做出来的东西放到 GitHub 上。</p>
     <p class="quiet">这里是我的个人主页，收集我做过的东西。</p>
   </section>
+
+  <section class="entry-list">
+    {%- for entry in collections.notes | limit(3) %}
+    {% include "note-item.html" %}
+    {%- endfor %}
+  </section>

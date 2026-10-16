@@ -1,0 +1,13 @@
+---
+layout: layout.html
+ogType: article
+---
+{% from "macros.html" import noteMeta %}
+  <article class="note">
+    <header class="note-head">
+      <h1 class="note-title">{{ title }}</h1>
+      <p class="note-meta">{{ noteMeta(date, tags) }}</p>
+    </header>
+
+{{ content | safe }}
+  </article>

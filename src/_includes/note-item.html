@@ -1,0 +1,6 @@
+{% from "macros.html" import noteMeta %}
+<article class="note-item">
+  <h2 class="note-name"><a href="{{ entry.url }}">{{ entry.data.title }}</a></h2>
+  <p class="note-meta">{{ noteMeta(entry.data.date, entry.data.tags) }}</p>
+  <p class="note-sum">{{ entry.data.summary }}</p>
+</article>

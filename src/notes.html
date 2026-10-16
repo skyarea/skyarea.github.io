@@ -1,0 +1,14 @@
+---
+layout: layout.html
+title: 记录
+pageDesc: skyarea 的技术记录：踩过的坑和查到的事实。
+permalink: /notes/index.html
+---
+  <h1 class="wordmark">log</h1>
+
+  <section class="entry-list">
+    <p class="lede">踩过的坑，查到的事实。写下来是为了下次不用再查一遍。</p>
+    {%- for entry in collections.notes %}
+    {% include "note-item.html" %}
+    {%- endfor %}
+  </section>

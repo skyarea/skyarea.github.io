@@ -22,6 +22,25 @@ export default function (eleventyConfig) {
 		return String(value).slice(0, 10);
 	});
 
+	// 笔记 collection：用 glob 注册，不在目录数据里写 tag: notes——
+	// tags 已被占用为内容分类，写进去会让 "notes" 混进每篇笔记的标签数组并显示成 #notes。
+	// 排序在这里做完（日期倒序，同日按标题正序），下游模板只遍历不再排。
+	eleventyConfig.addCollection("notes", (collection) =>
+		collection
+			.getFilteredByGlob("src/notes/*.md")
+			.sort((a, b) => {
+				const da = a.data.date.getTime();
+				const db = b.data.date.getTime();
+				if (da !== db) {
+					return db - da;
+				}
+				return String(a.data.title).localeCompare(String(b.data.title));
+			}),
+	);
+
+	// 取前 N 条。首页"最近三篇"用它；Nunjucks 没有内置 limit（slice 是 Liquid 的）。
+	eleventyConfig.addFilter("limit", (list, count) => Array.from(list ?? []).slice(0, count));
+
 	// 笔记正文要能内嵌原生 HTML（提示块 .key 这类结构在标准 Markdown 里没有对应写法）。
 	// Eleventy 的 Markdown 引擎本来就默认 html: true，这里不覆盖 setLibrary，
 	// 少一处会和上游默认值漂移的地方。
