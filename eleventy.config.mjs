@@ -34,7 +34,12 @@ export default function (eleventyConfig) {
 				if (da !== db) {
 					return db - da;
 				}
-				return String(a.data.title).localeCompare(String(b.data.title));
+				// 不用 localeCompare：它依 ICU 与当前 locale，本机（en_US.UTF-8）与
+				// Actions 的 ubuntu runner（C.UTF-8）对中文标题能排出不同顺序，
+				// 本地预览就会跟上线后的不一致。按码位比，到哪台机器都一样。
+				const ta = String(a.data.title);
+				const tb = String(b.data.title);
+				return ta < tb ? -1 : ta > tb ? 1 : 0;
 			}),
 	);
 

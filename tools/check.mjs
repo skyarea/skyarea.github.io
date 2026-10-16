@@ -323,6 +323,43 @@ assert("加一篇笔记只需新建一个 .md（列表自动长出它，且不�
 	}
 });
 
+assert("同日笔记的顺序不依赖机器 locale（按码位，本地预览 = 上线结果）", () => {
+	// 选一对在两种排法下会翻目的标题：
+	//   码位："Alpha…"(0x41) 在 "苹果…"(0x82B9) 之前
+	//   ICU 中文排序：苹果（拼音）在 Alpha 之前
+	// 所以本断言等价于"比较器必须是码位比"。改回 localeCompare 就会红（本机已实测）。
+	const files = [
+		["zz-probe-alpha.md", "Alpha 探针"],
+		["zz-probe-pin.md", "苹果 探针"],
+	];
+	const paths = files.map(([f]) => join(ROOT, "src", "notes", f));
+	try {
+		for (const [f, title] of files) {
+			writeFileSync(
+				join(ROOT, "src", "notes", f),
+				`---\ntitle: ${title}\ndate: 2026-09-09\nsummary: 探针。\n---\n\n正文。\n`,
+				"utf8",
+			);
+		}
+		build();
+		const html = read(join("_site", "notes", "index.html"));
+		const order = [...html.matchAll(/href="\/notes\/([^/"]+)\//g)].map((m) => m[1]);
+		const a = order.indexOf("zz-probe-alpha");
+		const p = order.indexOf("zz-probe-pin");
+		if (a < 0 || p < 0) throw new Error("两个探针没都出现在列表里：" + order.join(","));
+		if (a > p) {
+			throw new Error(`顺序走了 locale 派的那条：苹果 排在 Alpha 之前（${order.join(", ")}）`);
+		}
+		return "Alpha 在苹果之前，即码位序";
+	} finally {
+		for (const path of paths) rmSync(path, { force: true });
+		for (const slug of ["zz-probe-alpha", "zz-probe-pin"]) {
+			rmSync(join(ROOT, "_site", "notes", slug), { recursive: true, force: true });
+		}
+		build();
+	}
+});
+
 assert("探针清理干净：跑完检查后工作树不因此变脏", () => {
 	const out = execFileSync("git", ["--no-optional-locks", "status", "--porcelain"], { cwd: ROOT, encoding: "utf8" });
 	const dirty = out.split("\n").filter((l) => l.includes("src/notes/") || l.includes("zz-check-probe"));
@@ -332,8 +369,10 @@ assert("探针清理干净：跑完检查后工作树不因此变脏", () => {
 
 // ---- 迁移保真 ----
 
-assert("迁移后的笔记内容与旧 HTML 逐字符等价（归一化 tags 那处规定改动）", () => {
-	// 旧文件在 Task 6 会被删除，所以这里的期望值是常量：2126 = 归一化后的可见文本长度
+assert("那篇配额笔记的内容指纹不变（防以后改丢段落）", () => {
+	// 与旧 HTML 的逐字符等价在 Task 3 已当面对过（归一化 tags 那处后两边都是 2126 字符）。
+	// 旧文件已删，所以这里守的是指纹：下面三个常量（2126 / 7 / 2）是当时旧文件的实测值，
+	// 不是从新文件反推的 —— 新文件意外掉内容时这里会红。
 	const flat = (text) =>
 		text
 			.replace(/<head>[\s\S]*?<\/head>/, "")

@@ -1,0 +1,56 @@
+name: 构建并发布到 GitHub Pages
+
+on:
+  push:
+    branches: [main]
+  # 允许在 Actions 页面手动跑一次，用于首次上线或 Settings 改完后的验证
+  workflow_dispatch:
+
+# 同一时间只跑一个部署，后触发的会取消先触发的，避免两个部署互踩
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+# 默认只读；只有 jobs.build 里显式升级它需要的那点权限
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: 按 lockfile 安装依赖
+        run: npm ci
+
+      - name: 构建
+        run: npm run build
+
+      # 验收断言。失败即中断，产物不会进入部署。
+      - name: 检查产物
+        run: npm run check
+
+      - uses: actions/configure-pages@v4
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    permissions:
+      pages: write
+      id-token: write
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
