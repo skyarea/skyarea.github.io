@@ -4,7 +4,8 @@
 
 ## 改内容
 
-- `index.html` — 文案和链接。
+- `index.html` — 主页文案和链接。
+- `books.html` — 推荐书单，每本书一个 `<article class="book">`。
 - `style.css` — 顶部 `:root` 是配色和字体变量，深色模式在 `prefers-color-scheme: dark` 块里。
 
 ## 本地预览
