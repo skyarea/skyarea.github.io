@@ -14,7 +14,8 @@
 
   --display: "Archivo", "Helvetica Neue", Arial, sans-serif;
   --text: "Manrope", -apple-system, "Segoe UI", "PingFang SC",
-          "Microsoft YaHei", "Noto Sans SC", sans-serif;
+          "Microsoft YaHei", "Noto Sans SC",
+          "Segoe UI Emoji", "Apple Color Emoji", "Noto Color Emoji", sans-serif;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -48,6 +49,53 @@ body {
 .card {
   width: 100%;
   max-width: 62rem;
+  position: relative;
+}
+
+/* 空域雷达：距离环 + 缓慢扫描 */
+.scope {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.scope::before,
+.scope::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 175vmax;
+  height: 175vmax;
+  margin: -87.5vmax 0 0 -87.5vmax;
+  border-radius: 50%;
+  -webkit-mask-image: radial-gradient(circle at center, #000 0%, transparent 62%);
+  mask-image: radial-gradient(circle at center, #000 0%, transparent 62%);
+}
+
+.scope::before {
+  background: repeating-radial-gradient(circle at center,
+    transparent 0 10vmax,
+    color-mix(in srgb, var(--ink) 8%, transparent) 10vmax calc(10vmax + 1px));
+}
+
+.scope::after {
+  background: conic-gradient(from 0deg,
+    transparent 0 316deg,
+    color-mix(in srgb, var(--accent) 12%, transparent) 355deg,
+    color-mix(in srgb, var(--accent) 26%, transparent) 360deg);
+  opacity: 0.5;
+}
+
+@media (prefers-color-scheme: dark) {
+  .scope::after { opacity: 0.85; }
+  .scope::before {
+    background: repeating-radial-gradient(circle at center,
+      transparent 0 10vmax,
+      color-mix(in srgb, var(--ink) 10%, transparent) 10vmax calc(10vmax + 1px));
+  }
 }
 
 .name {
@@ -97,18 +145,47 @@ body {
 }
 
 .links a {
+  position: relative;
   display: block;
   padding: 0.85rem 0;
   color: var(--link);
   text-decoration: none;
   font-weight: 600;
   font-size: 1rem;
+  transition: transform 0.35s cubic-bezier(0.2, 0.8, 0.2, 1),
+              color 0.2s ease;
 }
 
-.links a:hover {
-  text-decoration: underline;
-  text-decoration-thickness: 2px;
-  text-underline-offset: 0.25em;
+.links a::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 2px;
+  background: var(--accent);
+  transform: scaleX(0);
+  transform-origin: left center;
+  transition: transform 0.4s cubic-bezier(0.5, 0, 0.1, 1);
+}
+
+.links a:hover,
+.links a:focus-visible {
+  transform: translateX(0.45rem);
+}
+
+.links a:hover::after,
+.links a:focus-visible::after {
+  transform: scaleX(1);
+}
+
+.links a[aria-current="page"] {
+  color: var(--ink);
+}
+
+.links a[aria-current="page"]::after {
+  background: color-mix(in srgb, var(--ink) 30%, transparent);
+  transform: scaleX(1);
 }
 
 .foot {
@@ -134,27 +211,43 @@ a:focus-visible {
   }
 }
 
+.name span,
+.title span {
+  display: inline-block;
+}
+
 @media (prefers-reduced-motion: no-preference) {
-  .name {
-    animation: settle 0.55s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+  .name span,
+  .title span {
+    animation: rise 0.6s cubic-bezier(0.18, 0.85, 0.24, 1) both;
+    animation-delay: calc(0.12s + var(--i, 0) * 0.05s);
   }
   .horizon {
-    animation: draw 0.7s 0.15s cubic-bezier(0.5, 0, 0.1, 1) both;
+    animation: draw 0.75s 0.05s cubic-bezier(0.5, 0, 0.1, 1) both;
   }
   .body, .foot {
-    animation: reveal 0.5s 0.35s ease-out both;
+    animation: reveal 0.5s 0.5s ease-out both;
+  }
+  .scope::after {
+    animation: sweep 16s linear infinite;
+  }
+  .book:hover {
+    transform: translateX(0.5rem);
+  }
+  @keyframes rise {
+    from { opacity: 0; transform: translateY(0.45em) rotate(4deg); }
+    to { opacity: 1; transform: none; }
   }
   @keyframes draw {
     from { transform: scaleX(0); }
     to { transform: scaleX(1); }
   }
-  @keyframes settle {
-    from { opacity: 0; transform: translateY(0.35rem); }
+  @keyframes reveal {
+    from { opacity: 0; transform: translateY(0.6rem); }
     to { opacity: 1; transform: none; }
   }
-  @keyframes reveal {
-    from { opacity: 0; }
-    to { opacity: 1; }
+  @keyframes sweep {
+    to { transform: rotate(360deg); }
   }
 }
 
@@ -179,6 +272,10 @@ a:focus-visible {
   gap: clamp(1.75rem, 4vw, 2.5rem);
 }
 
+.book {
+  transition: transform 0.35s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
 .book-name {
   font-family: var(--text);
   font-size: clamp(1.375rem, 4vw, 2rem);
@@ -192,24 +289,15 @@ a:focus-visible {
   color: var(--link);
   text-decoration: none;
   box-shadow: inset 0 -2px 0 color-mix(in srgb, var(--link) 30%, transparent);
+  transition: box-shadow 0.3s ease, color 0.2s ease;
 }
 
 .book-name a:hover {
-  box-shadow: inset 0 -2px 0 var(--accent);
+  box-shadow: inset 0 -0.35em 0 color-mix(in srgb, var(--accent) 30%, transparent);
 }
 
 .book-where {
   margin: 0.35rem 0 0;
   color: var(--ink-quiet);
   font-size: 0.9375rem;
-}
-
-.back {
-  color: var(--link);
-  text-decoration: none;
-}
-
-.back:hover {
-  text-decoration: underline;
-  text-underline-offset: 0.25em;
 }

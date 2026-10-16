@@ -15,24 +15,35 @@
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
+<div class="scope" aria-hidden="true"></div>
 <main class="card">
 
-  <h1 class="title">reading</h1>
+  <h1 class="title"><span style="--i:0">r</span><span style="--i:1">e</span><span style="--i:2">a</span><span style="--i:3">d</span><span style="--i:4">i</span><span style="--i:5">n</span><span style="--i:6">g</span></h1>
   <div class="horizon" aria-hidden="true"></div>
 
-  <p class="lede">我推荐的书。</p>
+  <div class="body">
+    <section class="booklist">
+      <p class="lede">我推荐的书。</p>
+      <article class="book">
+        <h2 class="book-name">
+          <a href="https://weread.qq.com/web/reader/3a732350813abb123g0140b0">你身体里的奥秘</a>
+        </h2>
+        <p class="book-where">📖 微信读书</p>
+      </article>
+    </section>
 
-  <section class="booklist">
-    <article class="book">
-      <h2 class="book-name">
-        <a href="https://weread.qq.com/web/reader/3a732350813abb123g0140b0">你身体里的奥秘</a>
-      </h2>
-      <p class="book-where">微信读书</p>
-    </article>
-  </section>
+    <nav class="links" aria-label="链接">
+      <ul>
+        <li><a href="./">🏠 主页</a></li>
+        <li><a href="https://github.com/skyarea">🐙 GitHub</a></li>
+        <li><a href="https://github.com/skyarea?tab=repositories">🛠️ 项目</a></li>
+        <li><a href="books.html" aria-current="page">📚 书单</a></li>
+      </ul>
+    </nav>
+  </div>
 
   <footer class="foot">
-    <p><a class="back" href="./">返回主页</a></p>
+    <p>© 2026 skyarea，托管在 GitHub Pages。</p>
   </footer>
 
 </main>
