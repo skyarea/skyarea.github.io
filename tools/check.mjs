@@ -1,8 +1,9 @@
 /* 视觉系统的可执行断言。对 _site/ 与 src/assets/style.css 说话，不对实现说话。
    先跑起来看到它失败（style.css 还是空的），再写样式。 */
 
-import { readFileSync, readdirSync, statSync, existsSync } from "node:fs";
+import { readFileSync, readdirSync, statSync, existsSync, writeFileSync, rmSync } from "node:fs";
 import { join } from "node:path";
+import { execFileSync } from "node:child_process";
 
 const ROOT = process.cwd();
 const results = [];
@@ -28,6 +29,17 @@ function htmlFiles(dir, out = []) {
 	}
 	return out;
 }
+
+const build = () =>
+	execFileSync(process.execPath, [join(ROOT, "node_modules", "@11ty", "eleventy", "cmd.cjs")], {
+		cwd: ROOT,
+		encoding: "utf8",
+		stdio: "pipe",
+	});
+
+// 先建一次：本脚本可以单独跑（npm run check），不能依赖调用者负方已经 npx eleventy。
+// 实测：删掉 _site/ 后直接跑，17/23 通过——那些读产物的断言全因为文件不在而假失败。
+build();
 
 const css = () => read("src/assets/style.css");
 const site = () => htmlFiles("_site");
@@ -238,6 +250,84 @@ assert("强调色只有一种彩色", () => {
 	const uniq = [...new Set(colored)];
 	if (uniq.length > 2) throw new Error(`:root 里有 ${uniq.length} 种带色相的值：${uniq.join(" ")}`);
 	return `${uniq.length} 种带色相（含 --accent 及其浅色变体）`;
+});
+
+// ---- 工作流：加一篇笔记到底要碰几个文件 ----
+
+assert("构建产物不入库（_site/ 与 node_modules/ 不在 git 视野里）", () => {
+	const out = execFileSync("git", ["--no-optional-locks", "status", "--porcelain"], {
+		cwd: ROOT,
+		encoding: "utf8",
+	});
+	const leaks = out.split("\n").filter((l) => /(^|\s)(_site\/|node_modules\/)/.test(l));
+	if (leaks.length) throw new Error(`产物出现在 git 状态里：${leaks.slice(0, 3).join(" | ")}`);
+	return "git 看不到任何产物";
+});
+
+assert("加一篇笔记只需新建一个 .md（列表自动长出它，且不碰其他文件）", () => {
+	const probeRel = join("src", "notes", "zz-check-probe.md");
+	const probeAbs = join(ROOT, probeRel);
+	const listRel = join("_site", "notes", "index.html");
+	const readList = () => read(listRel);
+	const count = (html) => (html.match(/<article class="note-item"/g) ?? []).length;
+
+	if (existsSync(probeAbs)) throw new Error(`探针文件已存在，会污染计数：${probeRel}`);
+	// 先按当前 src/ 重建一次：_site/ 可能是上一轮检查留下的（带探针项），
+	// 拿它当基准会让本断言只能跑对一次（实测：第一次 1→2 通过，第二次 2→2 失败）。
+	build();
+	const before = count(readList());
+	const gitBefore = execFileSync("git", ["--no-optional-locks", "status", "--porcelain"], { cwd: ROOT, encoding: "utf8" });
+
+	try {
+		// 故意写成最坑的一篇：没有 tags、日期与现有笔记同日、标题里带引号
+		writeFileSync(
+			probeAbs,
+			"---\ntitle: 检查探针\ndate: 2026-10-16\nsummary: 探针摘要。\n---\n\n正文。\n",
+			"utf8",
+		);
+		build();
+
+		const after = readList();
+		const n = count(after);
+		if (n !== before + 1) throw new Error(`列表项从 ${before} 变成 ${n}，应为 ${before + 1}`);
+		if (!after.includes("/notes/zz-check-probe/")) throw new Error("列表里没有探针的链接");
+		if (!existsSync(join(ROOT, "_site", "notes", "zz-check-probe", "index.html"))) {
+			throw new Error("探针的详情页没生成");
+		}
+		// 缺 tags 时不得留下裸分隔符或空容器（Review Focus 1）
+		const probe = read(join("_site", "notes", "zz-check-probe", "index.html"));
+		if (/<span class="tags"><\/span>/.test(after + probe)) throw new Error("出现了空的 tags 容器");
+		if (/<\/time>\s*·\s*<\/p>/.test(after + probe)) throw new Error("出现了光秃秃的 · 分隔符");
+		if (probe.includes("undefined")) throw new Error("探针页里出现了 undefined");
+		// 同日的两篇必须顺序确定（Review Focus 4）。不猜中文的排序规则，
+		// 只要求两次构建的列表逐字节一致 —— 顺序会漂的话这里就红。
+		build();
+		const again = readList();
+		if (again !== after) {
+			const names = (html) => [...html.matchAll(/href="\/notes\/([^/"]+)\//g)].map((m) => m[1]).join(",");
+			throw new Error("同日笔记的列表顺序不稳定：" + names(after) + "  vs  " + names(again));
+		}
+		if (!again.includes("/notes/zz-check-probe/")) throw new Error("重构建后探针项丢了");
+		// 除探针本身外不得弄脏任何文件：这就是"不用碰别的文件"的硬证据
+		const gitAfter = execFileSync("git", ["--no-optional-locks", "status", "--porcelain"], { cwd: ROOT, encoding: "utf8" });
+		const dirty = gitAfter.split("\n").filter((l) => l.trim() && !gitBefore.includes(l))
+			.filter((l) => !l.includes("zz-check-probe"));
+		if (dirty.length) throw new Error(`加一篇笔记却弄脏了其他文件：${dirty.join(" | ")}`);
+		return `列表 ${before} → ${n}，除探针外零改动`;
+	} finally {
+		rmSync(probeAbs, { force: true });
+		// Eleventy 不删孤儿产物：光删 .md 重建的话，_site/notes/zz-check-probe/
+		// 会留在原地，下一轮检查的基准又坏了。先清输出再重建。
+		rmSync(join(ROOT, "_site", "notes", "zz-check-probe"), { recursive: true, force: true });
+		build();
+	}
+});
+
+assert("探针清理干净：跑完检查后工作树不因此变脏", () => {
+	const out = execFileSync("git", ["--no-optional-locks", "status", "--porcelain"], { cwd: ROOT, encoding: "utf8" });
+	const dirty = out.split("\n").filter((l) => l.includes("src/notes/") || l.includes("zz-check-probe"));
+	if (dirty.length) throw new Error(`检查脚本留下了文件：${dirty.join(" | ")}`);
+	return "src/notes/ 干净";
 });
 
 // ---- 迁移保真 ----
