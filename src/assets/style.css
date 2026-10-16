@@ -1,5 +1,5 @@
 /* skyarea — 夜航仪表
-   设计约束（spec §10）：两种字族、一个强调色、72ch 行长、
+   设计约束：两种字族、一个强调色、72ch 行长、
    动效只用 transform/opacity、prefers-reduced-motion 一刀切关闭、零 Web 字体。 */
 
 :root {
@@ -260,7 +260,7 @@ pre code {
 	animation: rise 420ms var(--ease) both;
 }
 
-/* stagger：一步 70ms，最多排到第 6 项（spec §10） */
+/* stagger：一步 70ms，最多排到第 6 项 */
 .note-item:nth-child(2) { animation-delay: 70ms; }
 .note-item:nth-child(3) { animation-delay: 140ms; }
 .note-item:nth-child(4) { animation-delay: 210ms; }
@@ -381,7 +381,7 @@ pre code {
 	}
 }
 
-/* 系统要求减少动态效果时一刀切关闭（spec §10 底线） */
+/* 系统要求减少动态效果时一刀切关闭 */
 @media (prefers-reduced-motion: reduce) {
 	*,
 	*::before,

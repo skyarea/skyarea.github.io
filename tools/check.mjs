@@ -125,7 +125,7 @@ assert("prefers-reduced-motion 一刀切关闭", () => {
 	return "animation/transition 均置 none";
 });
 
-assert("正文用色在主背景上不低于 4.5:1（spec §10 底线）", () => {
+assert("正文用色在主背景上不低于 4.5:1", () => {
 	const lum = (hex) => {
 		const c = [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16) / 255
 		).map((v) => (v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4));
