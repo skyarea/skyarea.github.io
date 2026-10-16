@@ -12,6 +12,11 @@
   --link: var(--chart-blue);
   --accent: var(--sectional);
 
+  /* 代码块：明暗两种模式下都是夜航仪表的深色 */
+  --panel: var(--night);
+  --panel-ink: #c3d6e0;
+  --panel-dim: #7a95a4;
+
   --display: "Archivo", "Helvetica Neue", Arial, sans-serif;
   --text: "Manrope", -apple-system, "Segoe UI", "PingFang SC",
           "Microsoft YaHei", "Noto Sans SC",
@@ -25,6 +30,9 @@
     --ink-quiet: #8ea0ac;
     --link: #7fb2d9;
     --accent: #e85fa8;
+    --panel: #061016;
+    --panel-ink: #cfe0e8;
+    --panel-dim: #7f9aa8;
   }
 }
 
@@ -231,7 +239,8 @@ a:focus-visible {
   .scope::after {
     animation: sweep 16s linear infinite;
   }
-  .book:hover {
+  .book:hover,
+  .entry:hover {
     transform: translateX(0.5rem);
   }
   @keyframes rise {
@@ -272,11 +281,23 @@ a:focus-visible {
   gap: clamp(1.75rem, 4vw, 2.5rem);
 }
 
-.book {
+.book,
+.entry {
   transition: transform 0.35s cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 
-.book-name {
+.entry {
+  border-top: 1px solid color-mix(in srgb, var(--ink) 18%, transparent);
+  padding-top: 1.5rem;
+}
+
+.entry-list > .entry:first-of-type {
+  border-top: 0;
+  padding-top: 0;
+}
+
+.book-name,
+.entry-name {
   font-family: var(--text);
   font-size: clamp(1.375rem, 4vw, 2rem);
   font-weight: 700;
@@ -285,19 +306,153 @@ a:focus-visible {
   margin: 0;
 }
 
-.book-name a {
+.book-name a,
+.entry-name a {
   color: var(--link);
   text-decoration: none;
   box-shadow: inset 0 -2px 0 color-mix(in srgb, var(--link) 30%, transparent);
   transition: box-shadow 0.3s ease, color 0.2s ease;
 }
 
-.book-name a:hover {
+.book-name a:hover,
+.entry-name a:hover {
   box-shadow: inset 0 -0.35em 0 color-mix(in srgb, var(--accent) 30%, transparent);
 }
 
-.book-where {
+.book-where,
+.entry-where {
   margin: 0.35rem 0 0;
   color: var(--ink-quiet);
   font-size: 0.9375rem;
+}
+
+.entry-where time {
+  font-variant-numeric: tabular-nums;
+}
+
+.entry-sum {
+  margin: 0.6rem 0 0;
+  max-width: 54ch;
+}
+
+/* ── 记录正文 ── */
+.note {
+  max-width: 68ch;
+}
+
+.note-head {
+  margin: 0 0 clamp(1.75rem, 5vw, 2.75rem);
+}
+
+.note-title {
+  font-size: clamp(1.5rem, 4.5vw, 2.125rem);
+  font-weight: 800;
+  line-height: 1.25;
+  letter-spacing: -0.02em;
+  margin: 0;
+}
+
+.note-meta {
+  margin: 0.6rem 0 0;
+  color: var(--ink-quiet);
+  font-size: 0.9375rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.note > section {
+  margin: 0 0 clamp(2.25rem, 6vw, 3.25rem);
+}
+
+.note h3 {
+  font-size: clamp(1.1875rem, 3vw, 1.375rem);
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  margin: 0 0 1rem;
+  text-wrap: balance;
+}
+
+.note h3 code {
+  white-space: nowrap;
+}
+
+.note p,
+.note li {
+  margin: 0 0 1rem;
+}
+
+.note ul {
+  margin: 0 0 1.25rem;
+  padding-left: 1.35rem;
+}
+
+.note li + li {
+  margin-top: 0.4rem;
+}
+
+.note a:not(.back) {
+  color: var(--link);
+  text-decoration: none;
+  box-shadow: inset 0 -2px 0 color-mix(in srgb, var(--link) 30%, transparent);
+}
+
+.note a:not(.back):hover {
+  box-shadow: inset 0 -0.3em 0 color-mix(in srgb, var(--accent) 35%, transparent);
+}
+
+/* 结论句：只加一条左边线，不铺底色 */
+.key {
+  margin: 1.5rem 0;
+  padding: 0.1rem 0 0.1rem 1.15rem;
+  border-left: 3px solid var(--accent);
+}
+
+.key p {
+  margin: 0;
+  font-weight: 600;
+}
+
+.key p + p {
+  margin-top: 0.5rem;
+}
+
+.key .quiet {
+  font-weight: 400;
+  color: var(--ink-quiet);
+}
+
+/* 代码块：横向溢出时右缘带一道阴影提示还有内容 */
+.note pre {
+  margin: 1.25rem 0 1.5rem;
+  padding: 1rem 1.1rem;
+  overflow-x: auto;
+  color: var(--panel-ink);
+  border-left: 3px solid var(--accent);
+  font-size: 0.8125rem;
+  line-height: 1.6;
+  tab-size: 2;
+  background:
+    linear-gradient(to right, var(--panel) 65%, transparent) 0 0 / 2.5rem 100% repeat-y,
+    linear-gradient(to left, color-mix(in srgb, #000 55%, transparent) 55%, transparent) 100% 0 / 2.5rem 100% repeat-y,
+    var(--panel);
+  background-attachment: local, scroll, local;
+}
+
+.note pre code {
+  background: none;
+  padding: 0;
+  font-size: inherit;
+  color: inherit;
+}
+
+.note pre .c {
+  color: var(--panel-dim);
+}
+
+code {
+  font-family: ui-monospace, "Cascadia Mono", "SF Mono", Consolas, "Courier New", monospace;
+  font-size: 0.875em;
+  padding: 0.1em 0.35em;
+  background: color-mix(in srgb, var(--ink) 8%, transparent);
+  border-radius: 2px;
+  word-break: break-word;
 }

@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>GitHub API 配额 · skyarea</title>
+<meta name="description" content="匿名请求 api.github.com 只有 60 次/小时/IP，装 codegraph、更新 uv 的脚本死在这一步。带 token，不是等 reset。">
+<meta property="og:title" content="GitHub API 配额：让脚本带上 token">
+<meta property="og:description" content="匿名请求 api.github.com 只有 60 次/小时/IP。带 token，不是等 reset。">
+<meta property="og:type" content="article">
+<link rel="icon" href="../favicon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..900&family=Manrope:wght@400..800&display=swap">
+<link rel="stylesheet" href="../style.css">
+</head>
+<body>
+<div class="scope" aria-hidden="true"></div>
+<main class="card">
+
+  <h1 class="title"><span style="--i:0">q</span><span style="--i:1">u</span><span style="--i:2">o</span><span style="--i:3">t</span><span style="--i:4">a</span></h1>
+  <div class="horizon" aria-hidden="true"></div>
+
+  <div class="body">
+    <article class="note" id="top">
+
+      <header class="note-head">
+        <h2 class="note-title">GitHub API 配额：让脚本带上 token</h2>
+        <p class="note-meta">
+          <time datetime="2026-10-16">2026-10-16</time> · Windows PowerShell
+        </p>
+      </header>
+
+      <p>
+        匿名请求 <code>api.github.com</code> 是 <strong>60 次/小时/IP</strong>，带 token 是 <strong>5000 次/小时</strong>。
+        共享出口 IP 上那 60 次基本靠不住：这台机器上，什么都没跑的时候配额也常被吃到只剩零头，
+        于是未认证的脚本随机失败 —— 同一行命令，昨天能过今天不过。
+      </p>
+      <p>
+        返回 403 时先去查配额，别怀疑脚本写错了：
+      </p>
+
+      <pre><code>gh api rate_limit --jq '.resources.core'
+<span class="c"># 带认证：limit 5000</span>
+
+curl.exe -s https://api.github.com/rate_limit
+<span class="c"># 匿名：limit 60，remaining 快见底就是被吃完了</span></code></pre>
+
+      <p>
+        响应里的 <code>reset</code> 是 Unix 秒，等它等于等最多一小时。
+        <strong>正确做法是带上 token，不是等。</strong>
+      </p>
+
+      <section>
+        <h3>codegraph：用 CODEGRAPH_VERSION 绕过那一次 API 调用</h3>
+
+        <p>官方的 <code>install.ps1</code> 解析版本的逻辑，上游源码第 100–102 行（已核对）：</p>
+
+        <pre><code>$version = $env:CODEGRAPH_VERSION
+if (-not $version) {
+  $version = (Invoke-RestMethod "https://api.github.com/repos/$repo/releases/latest").tag_name
+}</code></pre>
+
+        <p>
+          这一步的 <code>Invoke-RestMethod</code> <strong>没有 <code>-Headers</code>，整个脚本不带任何认证</strong>，
+          匿名打一次 API，撞墙就撞在第 2 步上。后面第 3 步的下载走
+          <code>github.com/…/releases/download/</code>，那不是 API，不占配额。
+        </p>
+
+        <p>解法：先把版本号查出来设进环境变量，让脚本跳过那一次调用。</p>
+
+        <pre><code>$env:CODEGRAPH_VERSION = gh api `
+  repos/colbymchenry/codegraph/releases/latest --jq .tag_name
+irm https://raw.githubusercontent.com/colbymchenry/codegraph/main/install.ps1 | iex</code></pre>
+
+        <p>
+          <code>gh</code> 已经带好 token，所以查版本这一步没有配额问题。
+          用 <code>Invoke-RestMethod</code> 也一样的效果，自己把 token 塞进 header：
+        </p>
+
+        <pre><code>$token = gh auth token
+$env:CODEGRAPH_VERSION = (Invoke-RestMethod `
+  "https://api.github.com/repos/colbymchenry/codegraph/releases/latest" `
+  -Headers @{Authorization = "token $token"}).tag_name</code></pre>
+
+        <div class="key">
+          <p><code>irm | iex</code> 走 <code>raw.githubusercontent.com</code>，不占 API 配额，不需要 token。</p>
+          <p class="quiet">要 token 的只有<em>查版本号</em>那一下 —— 所以别整个脚本去重试或等配额。</p>
+        </div>
+
+        <p>实测（本机 Windows PowerShell 5.1）：</p>
+        <ul>
+          <li>匿名 <code>Invoke-RestMethod …/releases/latest</code> → 配额告急时 403；</li>
+          <li>加 <code>-Headers @{Authorization = "token $token"}</code> → <code>v1.6.2</code>；</li>
+          <li><code>"token gho_xxx"</code> 和 <code>"Bearer gho_xxx"</code> 两种写法都通，TLS 走 <code>SystemDefault</code> 也没问题。</li>
+        </ul>
+      </section>
+
+      <section>
+        <h3>uv：只认 UV_GITHUB_TOKEN，不认 GITHUB_TOKEN</h3>
+
+        <pre><code>$env:UV_GITHUB_TOKEN = gh auth token
+uv self update</code></pre>
+
+        <p>一次性写法：</p>
+
+        <pre><code>uv self update --token (gh auth token)</code></pre>
+
+        <p>
+          <code>$env:GITHUB_TOKEN</code> 是没用处的，uv 不读这个变量名。两条实测依据：
+        </p>
+        <ul>
+          <li><code>uv self update --help</code> 里 <code>--token</code> 只声明 <code>[env: UV_GITHUB_TOKEN=]</code>；</li>
+          <li>把 <code>uv.exe</code> 整个读进内存做字符串匹配：<code>UV_GITHUB_TOKEN</code> 出现 1 次，独立的 <code>GITHUB_TOKEN</code> 0 次（唯一那次命中就是 <code>UV_GITHUB_TOKEN</code> 的子串）。上游 <code>crates/uv-cli/src/lib.rs</code> 也是 <code>#[arg(long, env = EnvVars::UV_GITHUB_TOKEN)]</code>。</li>
+        </ul>
+
+        <p>还有一点值得知道：uv 较新版本（本机 0.13.1）<strong>已经不打 <code>api.github.com</code> 了</strong>。</p>
+
+        <pre><code>uv self update -v
+<span class="c">DEBUG Using official public self-update path</span></code></pre>
+        <p>
+          版本号从 <code>raw.githubusercontent.com/astral-sh/versions/main/v1/uv.ndjson</code>
+          或 <code>releases.astral.sh</code> 镜像取，都不占 API 配额。
+          所以在 <code>astral-sh/uv</code> 这个新版本上 token 只是保险 ——
+          <code>GITHUB_TOKEN</code>/<code>UV_GITHUB_TOKEN</code> 设与不设，<code>--dry-run</code> 输出完全一致。
+        </p>
+
+        <p>
+          真正还会打 API 的，是第三方 <code>uv tool install</code> / <code>uvx</code> 指向某个仓库 GitHub release 的场景 ——
+          那种时候同样靠 <code>UV_GITHUB_TOKEN</code>。
+        </p>
+      </section>
+
+      <p><a href="#top">↑ 回到顶部</a></p>
+
+    </article>
+
+    <nav class="links" aria-label="链接">
+      <ul>
+        <li><a href="../">🏠 主页</a></li>
+        <li><a href="https://github.com/skyarea">🐙 GitHub</a></li>
+        <li><a href="https://github.com/skyarea?tab=repositories">🛠️ 项目</a></li>
+        <li><a href="../books.html">📚 书单</a></li>
+        <li><a href="../notes.html" aria-current="page">📝 记录</a></li>
+      </ul>
+    </nav>
+  </div>
+
+  <footer class="foot">
+    <p>© 2026 skyarea，托管在 GitHub Pages。</p>
+  </footer>
+
+</main>
+</body>
+</html>
