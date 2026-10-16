@@ -1,0 +1,159 @@
+:root {
+  --overcast: #e9edef;
+  --surface: #f5f7f8;
+  --night: #0e1b24;
+  --haze: #6d7d88;
+  --chart-blue: #1f5c8b;
+  --sectional: #b4126b;
+
+  --bg: var(--overcast);
+  --ink: var(--night);
+  --ink-quiet: var(--haze);
+  --link: var(--chart-blue);
+  --accent: var(--sectional);
+
+  --display: "Archivo", "Helvetica Neue", Arial, sans-serif;
+  --text: "Manrope", -apple-system, "Segoe UI", "PingFang SC",
+          "Microsoft YaHei", "Noto Sans SC", sans-serif;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #0b1720;
+    --ink: #e4eaed;
+    --ink-quiet: #8ea0ac;
+    --link: #7fb2d9;
+    --accent: #e85fa8;
+  }
+}
+
+* { box-sizing: border-box; }
+
+html { -webkit-text-size-adjust: 100%; }
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--text);
+  font-size: 1.0625rem;
+  line-height: 1.6;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: clamp(1.5rem, 5vw, 5rem) clamp(1.25rem, 5vw, 4rem);
+}
+
+.card {
+  width: 100%;
+  max-width: 62rem;
+}
+
+.name {
+  font-family: var(--display);
+  font-stretch: 125%;
+  font-weight: 800;
+  font-size: clamp(2.5rem, 12.5vw, 11rem);
+  line-height: 1.05;
+  letter-spacing: -0.035em;
+  margin: 0;
+  text-transform: lowercase;
+}
+
+.horizon {
+  height: 3px;
+  background: var(--accent);
+  margin: clamp(0.75rem, 2vw, 1.5rem) 0 clamp(2rem, 5vw, 3.25rem);
+  transform-origin: left center;
+}
+
+.body {
+  display: grid;
+  grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr);
+  gap: clamp(2rem, 6vw, 5rem);
+  align-items: start;
+}
+
+.intro p {
+  margin: 0 0 1rem;
+  max-width: 42ch;
+}
+
+.intro .quiet {
+  color: var(--ink-quiet);
+  margin-bottom: 0;
+}
+
+.links ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  border-top: 1px solid color-mix(in srgb, var(--ink) 18%, transparent);
+}
+
+.links li {
+  border-bottom: 1px solid color-mix(in srgb, var(--ink) 18%, transparent);
+}
+
+.links a {
+  display: block;
+  padding: 0.85rem 0;
+  color: var(--link);
+  text-decoration: none;
+  font-weight: 600;
+  font-size: 1rem;
+}
+
+.links a:hover {
+  text-decoration: underline;
+  text-decoration-thickness: 2px;
+  text-underline-offset: 0.25em;
+}
+
+.foot {
+  margin-top: clamp(3rem, 8vw, 6rem);
+}
+
+.foot p {
+  margin: 0;
+  color: var(--ink-quiet);
+  font-size: 0.875rem;
+}
+
+a:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+  border-radius: 1px;
+}
+
+@media (max-width: 40rem) {
+  .body {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 2.25rem;
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .name {
+    animation: settle 0.55s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+  }
+  .horizon {
+    animation: draw 0.7s 0.15s cubic-bezier(0.5, 0, 0.1, 1) both;
+  }
+  .body, .foot {
+    animation: reveal 0.5s 0.35s ease-out both;
+  }
+  @keyframes draw {
+    from { transform: scaleX(0); }
+    to { transform: scaleX(1); }
+  }
+  @keyframes settle {
+    from { opacity: 0; transform: translateY(0.35rem); }
+    to { opacity: 1; transform: none; }
+  }
+  @keyframes reveal {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+}
