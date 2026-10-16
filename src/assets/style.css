@@ -1,1 +1,403 @@
-/* placeholder */
+/* skyarea — 夜航仪表
+   设计约束（spec §10）：两种字族、一个强调色、72ch 行长、
+   动效只用 transform/opacity、prefers-reduced-motion 一刀切关闭、零 Web 字体。 */
+
+:root {
+	/* 深色为默认，浅色在下面只做令牌覆盖 */
+	--bg: #0b1220;
+	--bg-grid: rgba(122, 160, 190, 0.07);
+	--ink: #e6edf3;
+	--ink-dim: #9aa3ad;
+	--ink-faint: #7d8790;
+	--rule: #262d34;
+	--panel: #10161c;
+	--panel-ink: #c3d0da;
+	--accent: #3fd0c9;
+	--accent-soft: #35a49d;
+
+	--font-body: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC",
+		"Hiragino Sans GB", "Microsoft YaHei", "Noto Sans CJK SC", sans-serif,
+		"Segoe UI Emoji", "Apple Color Emoji", "Noto Color Emoji";
+	--font-mono: ui-monospace, "Cascadia Code", "SF Mono", Consolas, "Liberation Mono",
+		Menlo, "Noto Sans Mono CJK SC", monospace;
+
+	--measure: 72ch;
+	--gap: clamp(1.5rem, 4vw, 2.75rem);
+	--ease: cubic-bezier(0.22, 0.61, 0.36, 1);
+}
+
+@media (prefers-color-scheme: light) {
+	:root {
+		--bg: #f2f5f7;
+		--bg-grid: rgba(38, 62, 84, 0.055);
+		--ink: #101820;
+		--ink-dim: #4a555f;
+		--ink-faint: #5a656e;
+		--rule: #ccd6dd;
+		--panel: #e8eef2;
+		--panel-ink: #23303a;
+		--accent: #0a726c;
+		--accent-soft: #0a726c;
+	}
+}
+
+*,
+*::before,
+*::after {
+	box-sizing: border-box;
+}
+
+html {
+	-webkit-text-size-adjust: 100%;
+}
+
+body {
+	margin: 0;
+	background: var(--bg);
+	color: var(--ink);
+	font-family: var(--font-body);
+	font-size: 1rem;
+	line-height: 1.72;
+	/* 背景纹理：一层极淡的网格，纯 linear-gradient 画出，不用图片也不加 DOM。
+	   正文压在其上，网格透明度 ≤ 0.07，对比度不受影响。 */
+	background-image:
+		linear-gradient(var(--bg-grid) 1px, transparent 1px),
+		linear-gradient(90deg, var(--bg-grid) 1px, transparent 1px);
+	background-size: 96px 96px, 96px 96px;
+	background-attachment: fixed;
+	min-height: 100vh;
+}
+
+.page {
+	max-width: 46rem;
+	margin: 0 auto;
+	padding: clamp(2.5rem, 7vw, 5rem) var(--gap) var(--gap);
+	/* 入场：整页一次上浮 */
+	animation: rise 480ms var(--ease) both;
+}
+
+/* ---------- 标题与元信息：等宽承担 ---------- */
+
+.wordmark {
+	margin: 0 0 0.35em;
+	font-family: var(--font-mono);
+	font-size: clamp(2rem, 7vw, 3rem);
+	font-weight: 600;
+	letter-spacing: 0.14em;
+	text-transform: lowercase;
+	color: var(--ink);
+	/* 逐字母入场不再靠 JS，也不再用 <span style="--i">；
+	   整词一次上浮，配合下边框的一道扫描线，动效留在 transform/opacity 上 */
+	animation: rise 520ms var(--ease) both;
+	animation-delay: 60ms;
+	position: relative;
+	padding-bottom: 0.5em;
+}
+
+.wordmark::after {
+	content: "";
+	position: absolute;
+	left: 0;
+	bottom: 0;
+	height: 1px;
+	width: 100%;
+	/* 从左到右扫出的一道线：用 transform 缩放，不动 width */
+	background: linear-gradient(90deg, var(--accent), transparent);
+	transform-origin: left center;
+	animation: sweep 600ms var(--ease) both;
+	animation-delay: 140ms;
+}
+
+.note-title {
+	margin: 0;
+	font-size: clamp(1.4rem, 4.5vw, 1.9rem);
+	font-weight: 650;
+	line-height: 1.3;
+	letter-spacing: 0;
+}
+
+.note-head {
+	margin-bottom: 2em;
+	padding-bottom: 1em;
+	border-bottom: 1px solid var(--rule);
+}
+
+.note-meta,
+.tags {
+	font-family: var(--font-mono);
+	font-size: 0.8rem;
+	letter-spacing: 0.04em;
+	color: var(--ink-dim);
+}
+
+.tags {
+	color: var(--accent-soft);
+}
+
+.lede {
+	color: var(--ink-dim);
+	margin: 0 0 2.25em;
+}
+
+/* 首页的"最近的记录"小标题：把介绍和笔记列表隔开，
+   否则笔记标题读起来像介绍的第三句。 */
+.section-title {
+	margin: 0 0 1.4em;
+	padding-bottom: 0.5em;
+	border-bottom: 1px solid var(--rule);
+	font-family: var(--font-mono);
+	font-size: 0.82rem;
+	font-weight: 500;
+	letter-spacing: 0.12em;
+	text-transform: none;
+	color: var(--ink-dim);
+}
+
+/* 各区块之间的呼吸：主页的介绍与笔记列表不能贴在一起 */
+.prose + .entry-list,
+.wordmark + .entry-list {
+	margin-top: 3rem;
+}
+
+/* ---------- 正文 ---------- */
+
+.prose,
+.note,
+.booklist,
+.entry-list {
+	max-width: var(--measure);
+}
+
+.prose p,
+.note p {
+	margin: 0 0 1.15em;
+}
+
+.quiet {
+	color: var(--ink-dim);
+	font-size: 0.92em;
+}
+
+.note h3 {
+	margin: 2.5em 0 0.8em;
+	font-size: 1.06rem;
+	font-weight: 650;
+	font-family: var(--font-mono);
+	letter-spacing: 0.02em;
+}
+
+a {
+	color: inherit;
+	text-decoration-color: var(--rule);
+	text-underline-offset: 0.22em;
+	transition: color .15s var(--ease), text-decoration-color .15s var(--ease);
+}
+
+a:hover,
+a:focus-visible {
+	color: var(--accent);
+	text-decoration-color: var(--accent);
+}
+
+:focus-visible {
+	outline: 2px solid var(--accent);
+	outline-offset: 3px;
+	border-radius: 2px;
+}
+
+/* ---------- 代码 ---------- */
+
+code {
+	font-family: var(--font-mono);
+	font-size: 0.86em;
+	background: var(--panel);
+	color: var(--panel-ink);
+	padding: 0.14em 0.4em;
+	border-radius: 3px;
+}
+
+pre {
+	margin: 0 0 1.6em;
+	padding: 1rem 1.15rem;
+	background: var(--panel);
+	color: var(--panel-ink);
+	border-left: 2px solid var(--accent);
+	border-radius: 4px;
+	overflow-x: auto;
+	line-height: 1.6;
+}
+
+pre code {
+	background: none;
+	padding: 0;
+	font-size: 0.82rem;
+	color: inherit;
+}
+
+/* ---------- 提示块 ---------- */
+
+.key {
+	margin: 0 0 1.6em;
+	padding: 0.9rem 1.1rem;
+	border: 1px solid var(--rule);
+	border-left: 2px solid var(--accent);
+	border-radius: 4px;
+	background: var(--panel);
+}
+
+.key > :first-child {
+	margin-top: 0;
+}
+
+.key > :last-child {
+	margin-bottom: 0;
+}
+
+/* ---------- 列表项 ---------- */
+
+.note-item {
+	margin: 0 0 2.25rem;
+	animation: rise 420ms var(--ease) both;
+}
+
+/* stagger：一步 70ms，最多排到第 6 项（spec §10） */
+.note-item:nth-child(2) { animation-delay: 70ms; }
+.note-item:nth-child(3) { animation-delay: 140ms; }
+.note-item:nth-child(4) { animation-delay: 210ms; }
+.note-item:nth-child(5) { animation-delay: 280ms; }
+.note-item:nth-child(6) { animation-delay: 350ms; }
+
+.note-name {
+	margin: 0 0 0.25em;
+	font-size: 1.12rem;
+	font-weight: 650;
+	line-height: 1.35;
+}
+
+.note-sum {
+	margin: 0.35em 0 0;
+	color: var(--ink-dim);
+	font-size: 0.94em;
+	max-width: 62ch;
+}
+
+/* ---------- 书单 ---------- */
+
+.book {
+	margin: 0 0 1.4rem;
+	animation: rise 420ms var(--ease) both;
+}
+
+.book-name {
+	margin: 0;
+	font-size: 1.08rem;
+	font-weight: 650;
+}
+
+.book-where {
+	margin: 0.15em 0 0;
+	font-family: var(--font-mono);
+	font-size: 0.78rem;
+	letter-spacing: 0.04em;
+	color: var(--ink-dim);
+}
+
+/* ---------- 导航与页脚 ---------- */
+
+.site-nav {
+	margin-top: 3rem;
+	padding-top: 1.25rem;
+	border-top: 1px solid var(--rule);
+	font-family: var(--font-mono);
+	font-size: 0.86rem;
+}
+
+.site-nav ul {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.4rem 1.35rem;
+	list-style: none;
+	margin: 0;
+	padding: 0;
+}
+
+.site-nav a {
+	text-decoration: none;
+	/* hover 只做位移与变色：transform / color，不碰布局属性 */
+	transition: color .15s var(--ease), transform .15s var(--ease);
+	display: inline-block;
+}
+
+.site-nav a:hover,
+.site-nav a:focus-visible {
+	transform: translateY(-2px);
+}
+
+.site-nav a[aria-current="page"] {
+	color: var(--accent);
+}
+
+.site-nav a[aria-current="page"]::after {
+	content: "";
+	display: block;
+	height: 1px;
+	background: var(--accent);
+	transform-origin: left center;
+	animation: sweep 420ms var(--ease) both;
+	animation-delay: 200ms;
+}
+
+.foot {
+	margin-top: 2.5rem;
+	font-family: var(--font-mono);
+	font-size: 0.76rem;
+	letter-spacing: 0.03em;
+	color: var(--ink-faint);
+}
+
+.foot p {
+	margin: 0;
+}
+
+/* ---------- 动效关键帧：只有 opacity / transform ---------- */
+
+@keyframes rise {
+	from {
+		opacity: 0;
+		transform: translateY(10px);
+	}
+	to {
+		opacity: 1;
+		transform: none;
+	}
+}
+
+@keyframes sweep {
+	from {
+		transform: scaleX(0);
+	}
+	to {
+		transform: scaleX(1);
+	}
+}
+
+/* 系统要求减少动态效果时一刀切关闭（spec §10 底线） */
+@media (prefers-reduced-motion: reduce) {
+	*,
+	*::before,
+	*::after {
+		animation: none !important;
+		transition: none !important;
+	}
+}
+
+/* 窄屏：收掉留白，正文仍然由 --measure 控制行长 */
+@media (max-width: 480px) {
+	.site-nav ul {
+		gap: 0.35rem 0.9rem;
+	}
+
+	.wordmark {
+		letter-spacing: 0.08em;
+	}
+}

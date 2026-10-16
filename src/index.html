@@ -10,6 +10,7 @@ title: skyarea
   </section>
 
   <section class="entry-list">
+    <h2 class="section-title">最近的记录</h2>
     {%- for entry in collections.notes | limit(3) %}
     {% include "note-item.html" %}
     {%- endfor %}
