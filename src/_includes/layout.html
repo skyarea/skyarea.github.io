@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{{ title if title else site.title }}</title>
+<meta name="description" content="{{ pageDesc if pageDesc else site.description }}">
+<meta property="og:title" content="{{ title if title else site.title }}">
+<meta property="og:description" content="{{ pageDesc if pageDesc else site.description }}">
+<meta property="og:type" content="{{ ogType if ogType else 'website' }}">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="/assets/style.css">
+</head>
+<body>
+<main class="page" id="top">
+
+{{ content | safe }}
+
+  <nav class="site-nav" aria-label="链接">
+    <ul>
+      {%- for item in site.nav %}
+      <li><a href="{{ item.path }}"{% if item.external %} rel="noopener"{% elif page.url == item.path %} aria-current="page"{% endif %}>{{ item.icon }} {{ item.label }}</a></li>
+      {%- endfor %}
+    </ul>
+  </nav>
+
+  <footer class="foot">
+    <p>{{ site.footer }}</p>
+  </footer>
+
+</main>
+</body>
+</html>

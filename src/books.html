@@ -1,0 +1,17 @@
+---
+layout: layout.html
+title: 书单
+pageDesc: skyarea 推荐的书单。
+permalink: /books/index.html
+---
+  <h1 class="wordmark">reading</h1>
+
+  <section class="booklist">
+    <p class="lede">我推荐的书。</p>
+    {%- for book in books %}
+    <article class="book">
+      <h2 class="book-name"><a href="{{ book.url }}">{{ book.title }}</a></h2>
+      <p class="book-where">📖 {{ book.source }}</p>
+    </article>
+    {%- endfor %}
+  </section>

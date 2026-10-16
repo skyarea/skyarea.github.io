@@ -1,0 +1,24 @@
+# 全站唯一一份导航与站点文案。改这里，四个页面同步生效。
+title: skyarea
+description: skyarea 的个人主页：项目与链接。
+footer: © 2026 skyarea，托管在 GitHub Pages。
+
+# 顺序即导航顺序。external: true 的项不参与当前页判定，并带 rel="noopener"。
+nav:
+  - icon: 🏠
+    label: 主页
+    path: /
+  - icon: 🐙
+    label: GitHub
+    path: https://github.com/skyarea
+    external: true
+  - icon: 🛠️
+    label: 项目
+    path: https://github.com/skyarea?tab=repositories
+    external: true
+  - icon: 📚
+    label: 书单
+    path: /books/
+  - icon: 📝
+    label: 记录
+    path: /notes/
