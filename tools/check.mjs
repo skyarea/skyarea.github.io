@@ -361,10 +361,11 @@ assert("同日笔记的顺序不依赖机器 locale（按码位，本地预览 =
 });
 
 assert("探针清理干净：跑完检查后工作树不因此变脏", () => {
+	// 只看探针文件，不看 src/notes/ 整体 —— 后者会把"作者刚加了一篇笔记"误判成脚本残留。
 	const out = execFileSync("git", ["--no-optional-locks", "status", "--porcelain"], { cwd: ROOT, encoding: "utf8" });
-	const dirty = out.split("\n").filter((l) => l.includes("src/notes/") || l.includes("zz-check-probe"));
+	const dirty = out.split("\n").filter((l) => /zz-check-probe|zz-probe-(alpha|pin)/.test(l));
 	if (dirty.length) throw new Error(`检查脚本留下了文件：${dirty.join(" | ")}`);
-	return "src/notes/ 干净";
+	return "无探针残留";
 });
 
 // ---- 迁移保真 ----
@@ -398,12 +399,16 @@ assert("summary 一份文字同时出现在 meta、og 与列表", () => {
 	const metas = note.match(/content="[^"]*60 次\/小时[^"]*"/g) ?? [];
 	if (metas.length !== 2) throw new Error(`详情页 meta 里命中 ${metas.length} 次，应为 2（description + og:description）`);
 	if (new Set(metas).size !== 1) throw new Error("两处字符串不一致");
-	for (const list of ["_site/notes/index.html", "_site/index.html"]) {
-		if (!read(list).includes("只有 60 次/小时/IP。带 token，不是等 reset。")) {
-			throw new Error(`${list} 里没有出现同一句摘要`);
-		}
+	const summary = "只有 60 次/小时/IP。带 token，不是等 reset。";
+	const list = read("_site/notes/index.html");
+	if (!list.includes(summary)) throw new Error("_site/notes/index.html 里没有出现同一句摘要");
+	// 首页只放最近三篇：断言"某一条特定笔记在首页"会随笔记数量漂（本篇就是被更新的四篇挤出前三时红的）。
+	// 真正要守的是跨页一致 —— 首页出现的每条摘要都必须能在完整列表里找到。
+	const sums = (html) => [...html.matchAll(/<p class="note-sum">([^<]*)<\/p>/g)].map((m) => m[1]);
+	for (const s of sums(read("_site/index.html"))) {
+		if (!list.includes(s)) throw new Error(`首页摘要不在列表里：${s}`);
 	}
-	return "三处一致";
+	return "详情 meta/og + 列表一致；首页摘要均为列表子集";
 });
 
 assert("书单渲染且没有空 href", () => {
